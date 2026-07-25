@@ -9,17 +9,15 @@
 
 ## 1. Introduction
 
-Quicksort orders values by selecting a pivot, partitioning the current region around that pivot, and solving the two resulting subproblems. Its practical efficiency depends strongly on partition balance. This project compares a deterministic final-element pivot with a uniformly selected random pivot while holding the in-place Lomuto partition method constant. The comparison combines recurrence analysis, correctness reasoning, instrumented operation counts, and reproducible timing.
+Quicksort selects a pivot, partitions the active region, and sorts the resulting subproblems. This project compares final-element and uniformly randomized pivots while keeping in-place Lomuto partitioning constant.
 
 ## 2. Assignment Objectives
 
-The objectives were to implement both Quicksort variants clearly, analyze best/average/worst time and space behavior, explain how randomization affects pivot quality, and empirically compare the algorithms across multiple sizes and input distributions. The implementation also had to remain correct on edge cases, preserve inputs in copy mode, support true in-place mode, and avoid Python recursion-limit failures on adversarial ordered data.
+The objectives were correct implementations, rigorous complexity analysis, reproducible empirical comparison, input preservation in copy mode, and stack safety on ordered data.
 
 ## 3. Deterministic Quicksort Design
 
-Deterministic Quicksort always selects the final active element, `values[high]`, as the pivot. It never substitutes a middle, first, random, or median-of-three pivot. After Lomuto partition returns the pivot's final index, the algorithm sorts the regions before and after that index.
-
-To protect Python's physical call stack, the implementation recursively processes the smaller region and continues iteratively through the larger region. The pivot rule, partition sequence, comparisons, and logical recursion tree remain those of last-pivot Quicksort. Consequently, the optimization prevents `RecursionError` but does not reduce worst-case quadratic work.
+Deterministic Quicksort always selects `values[high]`. It recursively processes the smaller region and iterates through the larger region, protecting Python's physical stack without changing the pivot rule, logical tree, or quadratic worst-case work.
 
 ## 4. Lomuto Partition Design
 
@@ -31,13 +29,11 @@ One comparison is recorded for each scanned array value compared with the pivot.
 
 Randomized Quicksort creates a local `random.Random(seed)` instance. For each nontrivial subarray, it selects an index uniformly from the inclusive range \([low, high]\), records the choice, swaps that value into `high`, and calls the same Lomuto function. It never calls `random.seed()` or modifies module-global random state.
 
-Using the same partition implementation isolates pivot policy as the primary experimental difference. A fixed seed reproduces the pivot trace and metrics. Different seeds can produce different decompositions while still producing the same correct ascending result.
+The shared partition isolates pivot policy as the experimental difference. A fixed seed reproduces pivot choices and metrics.
 
 ## 6. Input Validation and Edge Cases
 
-Public sorting functions require a list containing integers that are not Boolean values. Non-list containers, floats, strings, Boolean elements, and non-Boolean `in_place` arguments raise clear `TypeError` exceptions. Partition bounds must satisfy \(0 \leq low \leq high < len(values)\).
-
-Tests cover empty, one-element, two-element, sorted, reverse-sorted, repeated, all-equal, negative, and mixed lists. Copy mode returns a new list and leaves the caller's input unchanged. In-place mode returns the exact same list object.
+Public functions require lists of non-Boolean integers. Partition bounds satisfy \(0 \leq low \leq high < len(values)\). Tests cover required edge cases, invalid inputs, copy preservation, and same-object in-place behavior.
 
 ## 7. Correctness Discussion
 
@@ -104,7 +100,7 @@ Fixed seeds made datasets and randomized pivot schedules reproducible. Each comb
 
 ![Runtime comparison](results/quicksort_runtime_chart.png)
 
-The current CSV contains 48 completed rows. The size-10,000 summary is:
+The size-10,000 results from the 48-row CSV are:
 
 | Distribution | Algorithm | Median seconds | Comparisons | Swaps | Logical depth |
 |---|---|---:|---:|---:|---:|
@@ -117,7 +113,7 @@ The current CSV contains 48 completed rows. The size-10,000 summary is:
 | Repeated values | Deterministic | 5.194373 | 5,031,031 | 19,039 | 1,049 |
 | Repeated values | Randomized | 5.426506 | 5,051,490 | 29,954 | 1,051 |
 
-These are measurements from this run, not universal runtime constants. No statistical-significance test was performed.
+These measurements are specific to this run; no significance test was performed.
 
 ## 14. Comparison-Count Results
 
@@ -129,15 +125,11 @@ The deterministic sorted case recorded zero swaps under the documented counting 
 
 ## 15. Deterministic Versus Randomized Interpretation
 
-On random unique data, deterministic and randomized medians were nearly equal in this run because the final deterministic value did not systematically have an extreme rank. Random pivot selection added pivot exchanges but did not materially change the total comparison scale.
-
-On sorted and reverse-sorted unique data, the deterministic pivot was always extreme, whereas random selection produced shallow logical trees with depths 30 and 31. The observed comparison contrast supports the theoretical explanation that randomization reduces sensitivity to input order. It does not demonstrate that randomized Quicksort is always faster or that its worst case has disappeared.
+Random unique inputs produced similar medians because the final deterministic value was not systematically extreme. On ordered unique data, deterministic pivots were extreme, whereas randomized logical depths were 30 and 31. This supports reduced order sensitivity, not elimination of the randomized worst case.
 
 ## 16. Effect of Input Distribution
 
-Input distribution changed deterministic behavior substantially. Random unique input produced logical depth 29 at size 10,000, while both ordered unique inputs reached depth 10,000. Randomized logical depth stayed between 30 and 31 for the three unique-value distributions in the recorded median metrics.
-
-Runtime did not scale in exact proportion to comparisons because Python loop execution, list access, function calls, tuple recording, swaps, allocation, and system scheduling contribute different costs. Asymptotic analysis predicts growth patterns rather than exact seconds.
+At size 10,000, deterministic logical depth changed from 29 on random input to 10,000 on ordered input. Randomized depth remained 30–31. Python and system overhead explain why runtime does not scale exactly with comparison count.
 
 ## 17. Effect of Repeated Values
 
@@ -147,19 +139,15 @@ At size 10,000, deterministic and randomized versions recorded approximately 5.0
 
 ## 18. Practical Applications
 
-Quicksort's in-place partitioning can be useful when array-like data must be ordered with limited auxiliary storage. Its concepts apply to database and search preprocessing, data-processing pipelines, and resource-constrained software. Algorithm selection should still consider stability, duplicate frequency, adversarial ordering, memory limits, and language-specific constant factors rather than assuming one Quicksort policy is optimal for every workload.
+In-place partitioning is useful when array-like data must be ordered with limited auxiliary storage. Selection should still consider stability, duplicates, input order, and implementation costs.
 
 ## 19. Limitations
 
-The benchmark represents one instrumented Python implementation and one execution environment. Five trials support a course-scale comparison but not a formal statistical performance study. Metrics and pivot-trace storage add time and \(O(n)\) experimental memory. The code intentionally omits hybrid small-partition cutoffs, three-way partitioning, median-of-three pivots, and introspective worst-case fallback because they would change the assigned Lomuto pivot-policy comparison.
-
-The random inputs were deterministic pseudo-random samples rather than every possible permutation. Randomized results depend on the documented seed schedule, although fixed seeds reproduce them. Wall-clock measurements can vary with processor state and other system activity.
+The study uses one instrumented Python implementation, five trials, and deterministic pseudo-random samples. Metrics add time and \(O(n)\) trace memory, and wall-clock results can vary. Hybrid cutoffs, three-way partitioning, alternate pivots, and worst-case fallback were excluded because they would change the assigned comparison.
 
 ## 20. Conclusion
 
-The implementation demonstrates that pivot policy can change Quicksort's behavior without changing its partition function. Deterministic last-pivot Quicksort was competitive on random unique data but exhibited the predicted \(\Theta(n^2)\) comparison growth on sorted and reverse-sorted inputs. Randomization made performance much less dependent on initial unique-value ordering and produced observed comparison counts consistent with expected \(\Theta(n\log n)\).
-
-The repeated-value study also showed randomization's boundary: two-region Lomuto partitioning remained unbalanced when many values equaled the pivot. Stack-safe smaller-side recursion prevented Python failures in all cases, but it did not conceal the logical depth or quadratic work.
+Deterministic last-pivot Quicksort was competitive on random unique data but showed \(\Theta(n^2)\) growth on ordered inputs. Randomization reduced order sensitivity, while repeated values exposed the limitation of two-region Lomuto partitioning. Smaller-side recursion prevented stack failure without hiding logical depth or quadratic work.
 
 ## 21. References
 
