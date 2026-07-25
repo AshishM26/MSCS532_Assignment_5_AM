@@ -1,0 +1,21 @@
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+.pytest_cache/
+.coverage
+.matplotlib/
+
+# Local validation and tool artifacts
+coverage.xml
+htmlcov/
+test-results/
+validation-results/
+validation_results/
+ai-validation/
+ai_validation/
+*.log
+.vscode/
+.idea/
+.codex/
+.agents/
